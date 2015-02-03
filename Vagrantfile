@@ -3,100 +3,137 @@
 
 require 'fileutils'
 
-Vagrant.require_version ">= 1.6.0"
+VAGRANTFILE_API_VERSION = "2"
 
-CLOUD_CONFIG_PATH = File.join(File.dirname(__FILE__), "user-data")
-CONFIG = File.join(File.dirname(__FILE__), "config.rb")
+# shared_dir: <Destination>:<Location>
+forwardPorts = [ 27017, 80, 8000, 8080, 3306, 2375 ]
+synched_folder_location = "/home/core/share"
 
-$update_channel = "alpha"
-nodes = [
+# Install these, parameters: <docker_image_dir> <docker_image_name> <docker_container_name> <docker_run_command> <docker_required_dir>
+# docker_image_dir: Where is the docker image dir located?
+# docker_container_name: How will we name the container once installed?
+# image_to_install: What image will we install?
+# docker_run_command: What do we run when starting docker?
+# docker_required_dir: (optional) Do we have to wait on a dir that gets mounted?
+dockerContainers = [
+    # Create a container with MariaDB installed with root as the password
     {
-        :name => 'ghostdemo',
-        :config => 'ghostdemo',
-        :ip => '172.17.8.2',
-        :box => "coreos-%s" % $update_channel,
-        :url => "http://%s.release.core-os.net/amd64-usr/current/coreos_production_vagrant.json" % $update_channel,
-        :version => ">= 308.0.1",
-        :ram => 1024,
-        :cpus => 1,
-        :gui => false
+        :docker_image_dir => "/home/core/share/docker",
+        :docker_image_name => "mariadb",
+        :docker_container_name => "mariadb",
+        :docker_run_command => "/usr/bin/docker run --name mariadb -t -d -i -p 3306:3306 -e MYSQL_ROOT_PASSWORD=root mariadb"
+    },
+
+    # Create a docker container with node.js installed and bash running
+    {
+        :docker_image_dir => "/home/core/share/docker",
+        :docker_image_name => "nodejs_bash",
+        :docker_container_name => "node_app",
+        :docker_run_command => "/usr/bin/docker run --name node_app -t -d -i -p 8080:8080 -v /home/core/share/www:/var/www --link mariadb:mariadb nodejs_bash",
+        :docker_required_dir => "/home/core/share/www/node_app"
+    },
+    # Nginx
+    {
+        :docker_image_dir => "/home/core/share/docker",
+        :docker_image_name => "nginx",
+        :docker_container_name => "nginx",
+        :docker_run_command => "/usr/bin/docker run --name nginx -t -d -i -p 80:80 -v /home/core/share/www:/var/www -v /home/core/share/logs:/var/log nginx",
+        :docker_required_dir => "/home/core/share/www"
     }
 ]
 
-# Defaults for config options defined in CONFIG
-$update_channel = "alpha"
-$enable_serial_logging = false
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+    # IF NO NFS: node_config.vm.synced_folder "www", "/var/www"
+    #config.vm.synced_folder "www", "/var/www", :nfs => true, :mount_options => ['nolock,vers=3,udp']
+    config.vm.synced_folder ".", "#{synched_folder_location}", id: "core", :nfs => true,  :mount_options   => ['nolock,vers=3,udp']
 
-Vagrant.configure("2") do |config|
-    nodes.each do |node|
-        config.vm.define node[:name] do |node_config|
-            nfs_setting = RUBY_PLATFORM =~ /darwin/ || RUBY_PLATFORM =~ /linux/
+    # Configure Machine details
+    config.vm.box = "coreos-alpha"
+    config.vm.box_url = "http://alpha.release.core-os.net/amd64-usr/current/coreos_production_vagrant.json"
+    config.vm.box_version = ">= 575.0.0"
+    config.vm.hostname = "DevelopmentServer"
 
-            # IF NO NFS: node_config.vm.synced_folder "www", "/var/www"
-            #node_config.vm.synced_folder "www", "/var/www", :nfs => true, :mount_options => ['nolock,vers=3,udp']
-            node_config.vm.synced_folder ".", "/home/core/share", id: "core", :nfs => true,  :mount_options   => ['nolock,vers=3,udp']
+    # Private network
+    config.vm.network :private_network, ip: "172.17.8.2"
 
-            # Configure Machine details
-            node_config.vm.box = node[:box]
-            node_config.vm.box_url = node[:url]
-            node_config.vm.box_version = node[:version]
-            node_config.vm.hostname = node[:name]
+    # Fix authentication because of CoreOS
+    config.ssh.insert_key = false
 
-            # Private network
-            config.ssh.forward_agent = true
-            node_config.vm.network :private_network, ip: node[:ip]
+    # Forward Ports
+    forwardPorts.each do |port|
+        config.vm.network :forwarded_port, :host => port, :guest => port
+    end
 
-            # Forwards ports 60000 - 60010
-            (60000..6010).each do |port|
-                config.vm.network :forwarded_port, :host => port, :guest => port
-            end
+    # Disable guest additions
+    config.vm.provider :virtualbox do |v|
+        # On VirtualBox, we don't have guest additions or a functional vboxsf
+        # in CoreOS, so tell Vagrant that so it can be smarter.
+        v.check_guest_additions = false
+        v.functional_vboxsf     = false
 
-            # Copy over the machine discovery file when set
-            if File.exist?(CLOUD_CONFIG_PATH)
-              config.vm.provision :file, :source => "#{CLOUD_CONFIG_PATH}", :destination => "/tmp/vagrantfile-user-data"
-              config.vm.provision :shell, :inline => "mv /tmp/vagrantfile-user-data /var/lib/coreos-vagrant/", :privileged => true
-            end
+        # Set box details
+        v.memory = 1024
+        v.cpus = 1
+        v.gui = false
+    end
 
-            config.vm.provider :virtualbox do |v|
-                # On VirtualBox, we don't have guest additions or a functional vboxsf
-                # in CoreOS, so tell Vagrant that so it can be smarter.
-                v.check_guest_additions = false
-                v.functional_vboxsf     = false
-            end
+    # plugin conflict
+    if Vagrant.has_plugin?("vagrant-vbguest") then
+        config.vbguest.auto_update = false
+    end
 
-            # plugin conflict
-            if Vagrant.has_plugin?("vagrant-vbguest") then
-                config.vbguest.auto_update = false
-            end
+    # Forward docker tcp port, should be: tcp://IP:2375
+    # Run 'export DOCKER_HOST=tcp://IP:2375' to use it
+    if $expose_docker_tcp
+        config.vm.network "forwarded_port", guest: 2375, host: 2375, auto_correct: true
+    end
 
-            # Serial logging
-            if $enable_serial_logging
-              logdir = File.join(File.dirname(__FILE__), "log")
-              FileUtils.mkdir_p(logdir)
+    # Script for removing all the containers
+    $scriptRemoveAllContainers = <<-'EOF'
+    if [ `docker ps --no-trunc -aq | wc -l` -gt 0 ]
+        then
+        echo "Removing all the containers before provisioning"
+        docker stop `docker ps --no-trunc -aq`
+        docker rm `docker ps --no-trunc -aq`
+    fi
+    EOF
 
-              serialFile = File.join(logdir, "%s-serial.txt" % vm_name)
-              FileUtils.touch(serialFile)
+    $scriptRemoveServiceFiles = <<-'EOF'
+        echo "Removing all service files before provisioning them"
+        if [ -d "/etc/systemd/system/multi-user.target.wants" ]
+        then
+            rm -r /etc/systemd/system/multi-user.target.wants
+        fi
+    EOF
 
-              config.vm.provider :vmware_fusion do |v, override|
-                v.vmx["serial0.present"] = "TRUE"
-                v.vmx["serial0.fileType"] = "file"
-                v.vmx["serial0.fileName"] = serialFile
-                v.vmx["serial0.tryNoRxLoss"] = "FALSE"
-              end
+    # Enable the docker API and reload docker
+    config.vm.provision :shell, :inline => "cat > /etc/systemd/system/docker-tcp.socket << 'EOF'
+    [Unit]
+    Description=Docker Socket for the API
 
-              config.vm.provider :virtualbox do |vb, override|
-                vb.customize ["modifyvm", :id, "--uart1", "0x3F8", "4"]
-                vb.customize ["modifyvm", :id, "--uartmode1", serialFile]
-              end
-            end
+    [Socket]
+    ListenStream=2375
+    Service=docker.service
+    BindIPv6Only=both
 
-            # Forward docker tcp
-            if $expose_docker_tcp
-              config.vm.network "forwarded_port", guest: 2375, host: ($expose_docker_tcp + i - 1), auto_correct: true
-            end
+    [Install]
+    WantedBy=sockets.target"
 
-            # Run our ghost container and mount it on port 4000 + sync folders.
-            node_config.vm.provision :shell, :inline => "sh /home/core/share/install.sh docker/ghost_demo/ ghost_demo 60000:2368"
-        end
+    config.vm.provision :shell, :inline => "
+    echo 'Ignore the warning, we need to stop and restart to enable proxy';
+    systemctl enable docker-tcp.socket;
+    systemctl stop docker;
+    systemctl start docker-tcp.socket;
+    systemctl start docker"
+
+    # Remove all containers before provisioning them
+    config.vm.provision :shell, :inline => $scriptRemoveAllContainers
+
+    # Remove all service files before provisioning them
+    config.vm.provision :shell, :inline => $scriptRemoveServiceFiles
+
+    # Run the containers from the config above
+    dockerContainers.each do |container|
+        config.vm.provision :shell, :inline => "sh /home/core/share/install.sh '#{container[:docker_image_dir]}' '#{container[:docker_image_name]}' '#{container[:docker_container_name]}' '#{container[:docker_run_command]}' '#{container[:docker_required_dir]}'"
     end
 end
