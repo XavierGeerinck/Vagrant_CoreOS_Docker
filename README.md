@@ -72,13 +72,13 @@ Note: This you can set the root password in the Dockerfile by changing: ENV MYSQ
 }
 ```
 
-# MongoDB (untested)
+# MongoDB
 ```javascript
 {
     :docker_image_dir => "/home/core/share/docker",
     :docker_image_name => "mongodb_server",
     :docker_container_name => "mongodb",
-    :docker_run_command => "/usr/bin/docker run --name mongodb -t -d -i -p 8080:8080 mongodb_server",
+    :docker_run_command => "/usr/bin/docker run --name mongodb -t -d -i -p 27017:27017 mongodb_server",
     :docker_required_dir => "/home/core/share/docker"
 }
 ```
