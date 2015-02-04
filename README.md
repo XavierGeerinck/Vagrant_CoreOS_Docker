@@ -1,7 +1,7 @@
 Vagrant_CoreOS_Docker
 =====================
 
-# Install a container
+## Install a container
 1. Clone this repository
 2. Make sure too have vagrant and virtualbox installed
 3. Adapt the vagrantfile to install the containers you need
@@ -9,14 +9,14 @@ Vagrant_CoreOS_Docker
 4. Wait till everything is done
 5. Have fun using your development environment
 
-# Tips
+## Tips
 - add `export DOCKER_HOST=tcp://172.17.8.2:2375` to your ~/.bashrc file on your mac / ubuntu
 this way you can use the docker commands in your terminal.
 - To enter a container in SSH, run: `./enter.sh <container>` OR `vagrant ssh -- sudo share/nsenter.sh <container>`
 - If you get the message  `default: Warning: Remote connection disconnect. Retrying...` being spammed, then you need to recreate your vagrant insecure key. You can do this by removing the ~/.vagrant.d/insecure_prive_key file on mac and ubuntu or C:\Users\<username>\vagrant.d\insecure_private_key on windows.
 
-# Container configurations
-## Ghost Blog (port 60001)
+## Container configurations
+### Ghost Blog (port 60001)
 ```javascript
 {
     :docker_image_dir => "/home/core/share/docker",
@@ -26,7 +26,7 @@ this way you can use the docker commands in your terminal.
 }
 ```
 
-## MariaDB (password = root) (port 3306)
+### MariaDB (password = root) (port 3306)
 
 Note: This you can set the root password in the Dockerfile by changing: ENV MYSQL_ROOT_PASSWORD
 
@@ -39,7 +39,7 @@ Note: This you can set the root password in the Dockerfile by changing: ENV MYSQ
 }
 ```
 
-## Nginx (Loads the www folder to /var/www) (port 8080)
+### Nginx (Loads the www folder to /var/www) (port 8080)
 ```javascript
 {
     :docker_image_dir => "/home/core/share/docker",
@@ -50,7 +50,7 @@ Note: This you can set the root password in the Dockerfile by changing: ENV MYSQ
 }
 ```
 
-## Node.JS (Development bash container with node.js installed, enter container by running ./enter.sh <containerName>) (port 8080)
+### Node.JS (Development bash container with node.js installed, enter container by running ./enter.sh <containerName>) (port 8080)
 ```javascript
 {
     :docker_image_dir => "/home/core/share/docker",
@@ -61,7 +61,7 @@ Note: This you can set the root password in the Dockerfile by changing: ENV MYSQ
 }
 ```
 
-## Node.JS (Will run the package.json located in the nodejs image automatically) (port 8080)
+### Node.JS (Will run the package.json located in the nodejs image automatically) (port 8080)
 ```javascript
 {
     :docker_image_dir => "/home/core/share/docker",
@@ -72,7 +72,7 @@ Note: This you can set the root password in the Dockerfile by changing: ENV MYSQ
 }
 ```
 
-# MongoDB
+### MongoDB
 ```javascript
 {
     :docker_image_dir => "/home/core/share/docker",
@@ -83,5 +83,5 @@ Note: This you can set the root password in the Dockerfile by changing: ENV MYSQ
 }
 ```
 
-# Reference
+## Reference
 https://docs.docker.com/reference/commandline/cli/#exec
