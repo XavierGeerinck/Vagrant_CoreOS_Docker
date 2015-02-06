@@ -9,11 +9,18 @@ Vagrant_CoreOS_Docker
 4. Wait till everything is done
 5. Have fun using your development environment
 
-## Tips
-- add `export DOCKER_HOST=tcp://172.17.8.2:2375` to your ~/.bashrc file on your mac / ubuntu
-this way you can use the docker commands in your terminal.
-- To enter a container in SSH, run: `./enter.sh <container>` OR `vagrant ssh -- sudo share/nsenter.sh <container>`
-- If you get the message  `default: Warning: Remote connection disconnect. Retrying...` being spammed, then you need to recreate your vagrant insecure key. You can do this by removing the ~/.vagrant.d/insecure_prive_key file on mac and ubuntu or C:\Users\<username>\vagrant.d\insecure_private_key on windows.
+## FAQ
+### Reaching docker on the local computer
+add `export DOCKER_HOST=tcp://172.17.8.2:2375` to your ~/.bashrc file on your mac / ubuntu this way you can use the docker commands in your terminal.
+
+### Entering a container like you would with SSH
+To enter a container, run: `./enter.sh <container>` OR `vagrant ssh -- sudo share/nsenter.sh <container>`
+
+### The error default: Warning: Remote connection disconnect. Retrying... is being spammed
+There are several possible solutions for this.
+
+1. Clear the incorrect nfs records by opening the file `/etc/exports` and removing the line manually
+2. Recreate your vagrant insecure key. You can do this by removing the` ~/.vagrant.d/insecure_prive_key` file on mac and ubuntu or `C:\Users\<username>\vagrant.d\insecure_private_key on windows`.
 
 ## Container configurations
 ### Ghost Blog (port 60001)
