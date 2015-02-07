@@ -8,6 +8,9 @@ VAGRANTFILE_API_VERSION = "2"
 # shared_dir: <Destination>:<Location>
 forwardPorts = [ 27017, 80, 8000, 8080, 3306, 2375 ]
 synched_folder_location = "/home/core/share"
+data_folder_location = "#{synched_folder_location}/data"
+logs_folder_location = "#{synched_folder_location}/logs"
+images_folder_location = "#{synched_folder_location}/docker"
 
 # Install these, parameters: <docker_image_dir> <docker_image_name> <docker_container_name> <docker_run_command> <docker_required_dir>
 # docker_image_dir: Where is the docker image dir located?
@@ -18,27 +21,27 @@ synched_folder_location = "/home/core/share"
 dockerContainers = [
     # Create a container with MariaDB installed with root as the password
     {
-        :docker_image_dir => "/home/core/share/docker",
+        :docker_image_dir => "#{images_folder_location}",
         :docker_image_name => "mariadb",
         :docker_container_name => "mariadb",
-        :docker_run_command => "/usr/bin/docker run --name mariadb -t -d -i -p 3306:3306 -e MYSQL_ROOT_PASSWORD=root mariadb"
+        :docker_run_command => "/usr/bin/docker run --name mariadb -t -d -i -p 3306:3306 -e MYSQL_ROOT_PASSWORD=root -v #{data_folder_location}/mariadb:/var/lib/mysql mariadb"
     },
 
     # Create a docker container with node.js installed and bash running
     {
-        :docker_image_dir => "/home/core/share/docker",
+        :docker_image_dir => "#{images_folder_location}",
         :docker_image_name => "nodejs_bash",
         :docker_container_name => "node_app",
-        :docker_run_command => "/usr/bin/docker run --name node_app -t -d -i -p 8080:8080 -v /home/core/share/www:/var/www --link mariadb:mariadb nodejs_bash",
-        :docker_required_dir => "/home/core/share/www/node_app"
+        :docker_run_command => "/usr/bin/docker run --name node_app -t -d -i -p 8080:8080 -v #{data_folder_location}/node_app:/var/www --link mariadb:mariadb nodejs_bash",
+        :docker_required_dir => "#{data_folder_location}/node_app"
     },
     # Nginx
     {
-        :docker_image_dir => "/home/core/share/docker",
+        :docker_image_dir => "#{images_folder_location}",
         :docker_image_name => "nginx",
         :docker_container_name => "nginx",
-        :docker_run_command => "/usr/bin/docker run --name nginx -t -d -i -p 80:80 -v /home/core/share/www:/var/www -v /home/core/share/logs:/var/log nginx",
-        :docker_required_dir => "/home/core/share/www"
+        :docker_run_command => "/usr/bin/docker run --name nginx -t -d -i -p 80:80 -v #{data_folder_location}/nginx:/var/www -v #{logs_folder_location}/nginx:/var/log/nginx nginx",
+        :docker_required_dir => "#{data_folder_location}/nginx"
     }
 ]
 
