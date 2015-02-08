@@ -48,7 +48,7 @@ dockerContainers = [
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     # IF NO NFS: node_config.vm.synced_folder "www", "/var/www"
     #config.vm.synced_folder "www", "/var/www", :nfs => true, :mount_options => ['nolock,vers=3,udp']
-    config.vm.synced_folder ".", "#{synched_folder_location}", id: "core", :nfs => true,  :mount_options   => ['nolock,vers=3,udp']
+    config.vm.synced_folder ".", "#{synched_folder_location}", id: "core", :nfs => true,  :mount_options   => ['noatime,nosuid,nolock,vers=3,udp'], :map_uid => 0, :map_gid => 0
 
     # Configure Machine details
     config.vm.box = "coreos-alpha"
