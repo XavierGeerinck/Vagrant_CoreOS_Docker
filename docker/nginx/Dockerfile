@@ -21,7 +21,6 @@ RUN ln -sf /dev/stdout /var/log/nginx/access.log
 RUN ln -sf /dev/stderr /var/log/nginx/error.log
 
 # Copy our configs
-mkdir -p /etc/nginx/sites-enabled
 COPY data/nginx.conf /etc/nginx/nginx.conf
 COPY data/sites-enabled/development /etc/nginx/sites-enabled/development
 
