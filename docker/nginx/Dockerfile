@@ -1,25 +1,38 @@
-FROM debian:wheezy
+#
+# Nginx Dockerfile
+#
+# https://github.com/dockerfile/nginx
+#
 
-MAINTAINER NGINX Docker Maintainers "docker-maint@nginx.com"
+# Pull base image.
+FROM dockerfile/ubuntu
 
-RUN apt-key adv --keyserver pgp.mit.edu --recv-keys 573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62
-RUN echo "deb http://nginx.org/packages/mainline/debian/ wheezy nginx" >> /etc/apt/sources.list
-
-ENV NGINX_VERSION 1.7.9-1~wheezy
-
-RUN apt-get update && apt-get install -y nginx=${NGINX_VERSION} && rm -rf /var/lib/apt/lists/*
+# Install Nginx.
+RUN \
+  add-apt-repository -y ppa:nginx/stable && \
+  apt-get update && \
+  apt-get install -y nginx && \
+  rm -rf /var/lib/apt/lists/* && \
+  echo "\ndaemon off;" >> /etc/nginx/nginx.conf && \
+  chown -R www-data:www-data /var/lib/nginx
 
 # forward request and error logs to docker log collector
 RUN ln -sf /dev/stdout /var/log/nginx/access.log
 RUN ln -sf /dev/stderr /var/log/nginx/error.log
 
-VOLUME ["/var/cache/nginx"]
-
-EXPOSE 80 443
-
 # Copy our configs
+mkdir -p /etc/nginx/sites-enabled
 COPY data/nginx.conf /etc/nginx/nginx.conf
 COPY data/sites-enabled/development /etc/nginx/sites-enabled/development
 
+# Define mountable directories.
+VOLUME ["/etc/nginx/sites-enabled", "/etc/nginx/certs", "/etc/nginx/conf.d", "/var/log/nginx", "/var/www/html"]
+
+# Define working directory.
+WORKDIR /etc/nginx
+
 # Deamon off since we want Nginx in the foreground (needed for docker)
 CMD ["nginx", "-g", "daemon off;"]
+
+# Define working directory.
+WORKDIR /etc/nginx
